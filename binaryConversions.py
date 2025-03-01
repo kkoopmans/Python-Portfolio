@@ -13,14 +13,13 @@ def binary_to_decimal(binary):
         power += 1
     return decimal
 
-
 print("Menu: \n 1. Convert Dec to Bin \n 2. Convert Bin to Dec")
 choice = input("Which conversion would you like to do? (1 or 2) ")
 print("")
 
 if choice == '1':
-  value = input("Enter a decimal number to convert: ")
-  print(f'{value} in binary is {decimal_to_binary(int(value))}')
+    value = input("Enter a decimal number to convert: ")
+    print(f'{value} in binary is {decimal_to_binary(int(value))}')
 if choice == '2':
-  value = input("Enter a binary number to convert: ")
-  print(f'{value} in decimal is {binary_to_decimal(value)}')
+    value = input("Enter a binary number to convert: ")
+    print(f'{value} in decimal is {binary_to_decimal(value)}')

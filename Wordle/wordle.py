@@ -1,5 +1,5 @@
 '''
-Program: Wordle Full Hint Logic
+Program: Wordle
 Author: Mrs Koopmans
 Date: 2022-02-11
 '''
@@ -7,9 +7,10 @@ Date: 2022-02-11
 #the random library will be used for choosing a random secret word.
 import random
 import os
+import json
 
 #I've chosen to show the instructions just once at the start of the program.
-def welcomeMessage():
+def welcome_message():
   print(f'{"WORDLE":^44}')
   print(f'{"Get 6 chances to guess":^44}')
   print(f'{"a 5-letter word":^44}')
@@ -33,134 +34,164 @@ def welcomeMessage():
   input("Press enter when you're ready to start!")
 
 #randomly selects the secret word from the list of common 5-letter words
-def chooseWord():
-  '''
-  ===PART 2===
-  Here, you should change the hard-coded list of words I've used to the
-  secret word list from the file. You should only read in the file once
-  (not every time the program selects a new word)
-  '''
-  wordList = ["brave", "smart", "pride", "among","charm","elbow", "drive", 
-              "plant", "eerie", "spool", "pasta","refer"]
-  return random.choice(wordList)
+def choose_word():
+  global word_list
+  return random.choice(word_list)
 
-def record():
-  '''
-  ===Part 3===
-  Define and use functions to read in your csv, process and update it,
-  display the user's record (formatted) and update the file based on
-  the win/loss that just occurred.
-  Use this function and helper functions to do these things.
-  Note: You can modify the name, parameters and returns of this function
-  to better suit your solution
-  '''
-  pass
+# calculates changes to the player's record
+def record(won, guesses):
+  with open("Wordle/record.json") as record_file:
+    records = json.load(record_file)
 
-def greenClues(guess, secretWord):
+  records["Played"] += 1
+  if won:
+    records["Current Streak"] += 1
+    records[str(guesses)] += 1
+  else:
+    records["Current Streak"] = 0
+  if records["Current Streak"] > records["Max Streak"]:
+    records["Max Streak"] = records["Current Streak"]
+
+  display_record(records)
+
+  with open("Wordle/record.json","w") as record_file:
+    json.dump(records, record_file)
+
+# displays the player's updated record
+def display_record(rec):
+  win_percent = (rec["1"]+rec["2"]+rec["3"]+rec["4"]+rec["5"]+rec["6"])*100/rec["Played"]
+  print()
+  print("STATISTICS")
+  print(f'                      Current    Max')
+  print(f'  Played    Win %     Streak     Streak')
+  print(f'{rec["Played"]:^10}{(str(round(win_percent))+"%"):^10}{rec["Current Streak"]:^10}{rec["Max Streak"]:^10}')
+  print()
+  print("GUESS DISTRIBUTION")
+  print(f'1: {("*"*round(rec["1"]*10/rec["Played"])):<11}{rec["1"]}')
+  print(f'2: {("*"*round(rec["2"]*10/rec["Played"])):<11}{rec["2"]}')
+  print(f'3: {("*"*round(rec["3"]*10/rec["Played"])):<11}{rec["3"]}')
+  print(f'4: {("*"*round(rec["4"]*10/rec["Played"])):<11}{rec["4"]}')
+  print(f'5: {("*"*round(rec["5"]*10/rec["Played"])):<11}{rec["5"]}')
+  print(f'6: {("*"*round(rec["6"]*10/rec["Played"])):<11}{rec["6"]}')
+
+def green_clues(guess, secret_word):
   #will track letters we've given clues about
-  cluesSoFar = []
+  clues_so_far = []
   #will contain 5 characters, #, * or -, to tell the player how close their guess is
-  hintList = []
+  hint_list = []
   #loop thru 0-4 (indices of letters in a 5 letter word)
   for i in range(0,5):
     #correct letter in the correct spot gets #
-    if guess[i] == secretWord[i]:
-      hintList.append("#")
-      cluesSoFar.append(guess[i])
+    if guess[i] == secret_word[i]:
+      hint_list.append("#")
+      clues_so_far.append(guess[i])
     else:
-      hintList.append("-")
+      hint_list.append("-")
 
-  return hintList, cluesSoFar
+  return hint_list, clues_so_far
 
-def yellowClues(guess, secretWord, hintList, cluesSoFar):
+def yellow_clues(guess, secret_word, hint_list, clues_so_far):
   #loop thru 0-4 (indices of letters in a 5 letter word)
   for i in range(0,5):
     #check for possible stars - ie it's in the word but not in the right place.
-    if guess[i] in secretWord and guess[i] != secretWord[i]:
+    if guess[i] in secret_word and guess[i] != secret_word[i]:
       #count number of occurances of letter in guess and in secret word
-      timesInGuess = guess.count(guess[i])
-      timesInAns = secretWord.count(guess[i])
+      times_in_guess = guess.count(guess[i])
+      times_in_ans = secret_word.count(guess[i])
       #if there's fewer or equal number of occurances in the guess than the answer
       #or if we haven't given enough clues yet, we'll give a star.
-      if timesInGuess <= timesInAns or cluesSoFar.count(guess[i]) < timesInAns:
-        hintList[i] = "*"
+      if times_in_guess <= times_in_ans or clues_so_far.count(guess[i]) < times_in_ans:
+        hint_list[i] = "*"
       #since we've given a hint about this letter now, add it to the list of clues so far
-      cluesSoFar.append(guess[i])
-  return(hintList)
+      clues_so_far.append(guess[i])
+  return(hint_list)
 
 #generates and returns a 5 character hint based on the user's guess
-def generateHint(guess, secretWord):
+def generate_hint(guess, secret_word):
 
   #convert both words to lists
   guess = list(guess)
-  secretWord = list(secretWord)
+  secret_word = list(secret_word)
 
-  hintList, cluesSoFar = greenClues(guess, secretWord)
-  hintList = yellowClues(guess, secretWord, hintList, cluesSoFar)
+  hint_list, clues_so_far = green_clues(guess, secret_word)
+  hint_list = yellow_clues(guess, secret_word, hint_list, clues_so_far)
 
   #combine hint list into one 5-character string.
-  return "".join(hintList)
+  return "".join(hint_list)
 
 
 #checks if the user's guess is valid and prints feedback to the user
 #about why their guess is not valid if needed.
-'''
-===PART 2===
-Update isValidGuess to also return false if the word is not in 
-the five letter dictionary from part 1.
-To do this, you'll need to read in the contents of fiveLetterDict.txt
-NOTE: Do not read in the file every time you validate a guess.
-The file should only be read once.
-'''
-def isValidGuess(currGuess, secretWord):
-  if len(currGuess) != 5 and currGuess != "":
+def is_valid_guess(curr_guess, secret_word):
+
+  global dictionary
+  if len(curr_guess) != 5 and curr_guess != "":
     print("Your guess must be 5 letters")
-  elif currGuess != "" and not currGuess.isalpha():
+  elif curr_guess != "" and not curr_guess.isalpha():
     print("Your guess must contain only letters")
-  elif currGuess != "":
-    print(" " * 23 + generateHint(currGuess, secretWord))
+  elif curr_guess != "" and (curr_guess not in dictionary):
+    print("That word is not in my dictionary")
+  elif curr_guess != "":
+    print(" " * 23 + generate_hint(curr_guess, secret_word))
     #this is will only be reached if the guess is valid
     return True
   return False
 
-def getGuess(numGuesses, secretWord):
+def get_guess(num_guesses, secret_word):
   guess = ""
-  while not isValidGuess(guess, secretWord):
+  while not is_valid_guess(guess, secret_word):
     guess = input("Guess a 5 letter word: ").lower()
-  numGuesses += 1
-  return guess, numGuesses
+  num_guesses += 1
+  return guess, num_guesses
 
-def playGame():
-  numGuesses = 0
+def play_game():
+  num_guesses = 0
   guess = ""
-  secretWord = chooseWord()
+  secret_word = choose_word()
 
-  while guess != secretWord and numGuesses < 6:
-    guess, numGuesses = getGuess(numGuesses, secretWord)
+  #for testing
+  #print(secret_word)
+
+  while guess != secret_word and num_guesses < 6:
+    guess, num_guesses = get_guess(num_guesses, secret_word)
 
   #once loop has terminated, they either guessed correctly or guessed too many times.
-  if guess == secretWord:
+  if guess == secret_word:
     print("That's right!")
-    print(f"That took {numGuesses} guesses.")
+    print(f"That took {num_guesses} guesses.")
+    win = True
   else:
     print("Sorry, you've run out of guesses.")
-    print(f"The correct answer was {secretWord}")
+    print(f"The correct answer was {secret_word}")
+    win = False
 
-  record()
+  record(win, num_guesses)
 
 
 
 #allow game to run first time
 play = True
 
-welcomeMessage()
+welcome_message()
+
+#read secret word list and dictionary
+with open("Wordle/secret_word_list.txt") as wordlist_file:
+  word_list = []
+  for word in wordlist_file:
+    word_list.append(word.strip())
+
+with open("Wordle/five_letter_dict.txt") as dictionary_file:
+  dictionary = []
+  for word in dictionary_file:
+    dictionary.append(word.strip())
+
 #allows whole game to be re-played.
 while play:
   os.system('clear')
-  playGame()
+  play_game()
 
   again = input("Do you want to play again? ")
   if again.lower() != "y" and again.lower() != "yes":
-      play = False
+    play = False
 
-print ("Thanks for playing!")
+print("Thanks for playing!")
